@@ -146,6 +146,11 @@ main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
 .osm-note { margin: 18px 0 0; color: var(--muted); font-size: 9px; line-height: 1.55; }
 
 footer { min-height: 84px; border-top: 1px solid var(--line); width: min(1180px, calc(100% - 48px)); margin: 0 auto; display: flex; justify-content: space-between; align-items: center; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.footer-credit { display: inline-flex; align-items: center; gap: 8px; }
+.github-link { width: 27px; height: 27px; display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--ink); border: 1px solid var(--line); border-radius: 50%; transition: color .15s ease, background-color .15s ease, border-color .15s ease, transform .15s ease; }
+.github-link svg { width: 14px; height: 14px; }
+.github-link:hover { color: var(--paper); background: var(--ink); border-color: var(--ink); transform: translateY(-1px); }
+.github-link:focus-visible { outline: 3px solid var(--lime); outline-offset: 2px; }
 
 @media (max-width: 850px) {
   main, footer { width: min(100% - 28px, 680px); }
