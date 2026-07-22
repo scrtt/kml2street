@@ -41,40 +41,38 @@ export function createNwPublisherFilename(areaName?: string): string {
   return `${sanitizedAreaName || 'gebiet'}-addresses.csv`
 }
 
-export function createNwPublisherCsv(summaries: StreetSummary[], territory?: TerritoryInfo): string {
-  const rows = summaries.flatMap((summary) => {
-    const numberRanges = summary.ranges.length > 0
-      ? summary.ranges.map((range) => range.label.replaceAll('–', '-'))
-      : ['']
+function numberRanges(summary: StreetSummary): string {
+  return summary.ranges.map((range) => range.label.replaceAll('–', '-')).join(', ')
+}
 
-    return numberRanges.map((numberRange) => [
-      territory?.id ?? '',
-      territory?.number ?? '',
-      territory?.categoryCode ?? '',
-      territory?.category ?? '',
-      '',
-      '',
-      '',
-      numberRange,
-      summary.street,
-      summary.suburb,
-      summary.postalCode,
-      summary.state,
-      '',
-      '',
-      'Street',
-      'Available',
-      '0',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-    ])
-  })
+export function createNwPublisherCsv(summaries: StreetSummary[], territory?: TerritoryInfo): string {
+  const rows = summaries.map((summary) => [
+    territory?.id ?? '',
+    territory?.number ?? '',
+    territory?.categoryCode ?? '',
+    territory?.category ?? '',
+    '',
+    '',
+    '',
+    numberRanges(summary),
+    summary.street,
+    summary.suburb,
+    summary.postalCode,
+    summary.state,
+    '',
+    '',
+    'Street',
+    'Available',
+    '0',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ])
 
   return `\uFEFF${[NW_PUBLISHER_HEADERS, ...rows]
     .map((row) => row.map(csvCell).join(','))
