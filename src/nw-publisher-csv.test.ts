@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNwPublisherCsv, NW_PUBLISHER_HEADERS } from './nw-publisher-csv'
+import { createNwPublisherCsv, createNwPublisherFilename, NW_PUBLISHER_HEADERS } from './nw-publisher-csv'
 import type { StreetSummary } from './types'
 
 const summary: StreetSummary = {
@@ -65,5 +65,19 @@ describe('createNwPublisherCsv', () => {
 
     expect(rows).toHaveLength(1)
     expect(rows[0].split(',')[7]).toBe('')
+  })
+})
+
+describe('createNwPublisherFilename', () => {
+  it('marks the export as an address file and sanitizes the area name', () => {
+    expect(createNwPublisherFilename('Gebiet Süd / 12')).toBe('Gebiet-Süd-12-addresses.csv')
+  })
+
+  it('removes an imported file extension before adding the export suffix', () => {
+    expect(createNwPublisherFilename('Gebiet 12.csv')).toBe('Gebiet-12-addresses.csv')
+  })
+
+  it('uses a useful fallback when the area name is empty', () => {
+    expect(createNwPublisherFilename()).toBe('gebiet-addresses.csv')
   })
 })

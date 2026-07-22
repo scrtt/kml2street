@@ -32,6 +32,15 @@ function csvCell(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value
 }
 
+export function createNwPublisherFilename(areaName?: string): string {
+  const sanitizedAreaName = (areaName || 'gebiet')
+    .replace(/\.(?:kml|csv)$/i, '')
+    .replace(/[^a-z0-9äöüß_-]+/gi, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return `${sanitizedAreaName || 'gebiet'}-addresses.csv`
+}
+
 export function createNwPublisherCsv(summaries: StreetSummary[], territory?: TerritoryInfo): string {
   const rows = summaries.flatMap((summary) => {
     const numberRanges = summary.ranges.length > 0
