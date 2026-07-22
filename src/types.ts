@@ -51,6 +51,7 @@ export interface StreetSummary {
   addressCount: number
   ranges: NumberRange[]
   text: string
+  manuallyEdited?: boolean
   suburb: string
   postalCode: string
   state: string

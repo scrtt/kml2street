@@ -11,6 +11,7 @@
 - Gebiete direkt auf der Karte einzeichnen und wieder als KML speichern
 - Straßen und Adressen live über die OpenStreetMap Overpass API ermitteln
 - Hausnummern kompakt und nach Straßenseite zusammenfassen
+- Nummernkreise nach der Auswertung manuell hinzufügen, ändern, löschen, zusammenführen und auf den OSM-Stand zurücksetzen
 - Ergebnisse als CSV oder im 25-spaltigen NW-Scheduler-Format exportieren
 - Gebietsmetadaten wie `TerritoryID`, `Number`, `CategoryCode` und `Category` beim CSV-Workflow erhalten
 
@@ -48,6 +49,7 @@ Der Button **NW Scheduler CSV** erzeugt eine kommaseparierte UTF-8-Datei mit den
 - Getrennte Straßenseiten bleiben erkennbar: `1–15 (ungerade), 2–16 (gerade)`.
 - Lücken erzeugen getrennte Einträge: `1–9 (ungerade), 15–21 (ungerade)`.
 - Buchstabenzusätze und nicht standardisierte Werte bleiben erhalten.
+- Über **Bearbeiten** lassen sich einzelne Nummernkreise korrigieren. Markierte Bereiche können zu einem gemeinsamen Bereich verbunden werden, etwa `1–3` und `7–9` zu `1–9`.
 
 ## Entwicklung
 
