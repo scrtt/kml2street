@@ -38,7 +38,7 @@ TerritoryID,Category,Number,Boundary
 
 ## NW-Scheduler-Export
 
-Der Button **NW Scheduler CSV** erzeugt eine kommaseparierte UTF-8-Datei mit denselben 25 Spalten wie ein NW-Scheduler-Adress-Export. Jede erkannte Straße wird als eigener Datensatz ausgegeben. Hausnummernbereiche stehen in `Number`; Ort, Postleitzahl und Bundesland werden soweit verfügbar aus OpenStreetMap ergänzt.
+Der Button **NW Scheduler CSV** erzeugt eine kommaseparierte UTF-8-Datei mit denselben 25 Spalten wie ein NW-Scheduler-Adress-Export. Jeder angezeigte Hausnummernbereich wird als eigener Datensatz ausgegeben. Hat eine Straße mehrere Bereiche, wird sie entsprechend oft mit jeweils genau einem Bereich in `Number` exportiert. Straßen ohne gefundene Hausnummern bleiben einmal mit leerem `Number` enthalten. Ort, Postleitzahl und Bundesland werden soweit verfügbar aus OpenStreetMap ergänzt.
 
 `TerritoryAddressID` und `TerritoryAddressApartmentID` bleiben bewusst leer, damit beim Import keine bestehenden Adressen anhand fremder IDs aktualisiert werden.
 

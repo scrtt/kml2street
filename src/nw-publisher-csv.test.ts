@@ -38,4 +38,32 @@ describe('createNwPublisherCsv', () => {
     const withComma = { ...summary, street: 'Straße, Nord' }
     expect(createNwPublisherCsv([withComma])).toContain('"Straße, Nord"')
   })
+
+  it('exports every displayed number range as its own street row', () => {
+    const withThreeRanges: StreetSummary = {
+      ...summary,
+      ranges: [
+        { label: '1–9', parity: 'ungerade', values: ['1', '3', '5', '7', '9'] },
+        { label: '2–10', parity: 'gerade', values: ['2', '4', '6', '8', '10'] },
+        { label: '17', values: ['17'] },
+      ],
+    }
+    const rows = createNwPublisherCsv([withThreeRanges]).replace(/^\uFEFF/, '').split('\r\n').slice(1)
+
+    expect(rows).toHaveLength(3)
+    expect(rows.map((row) => row.split(',')[7])).toEqual(['1-9', '2-10', '17'])
+    expect(rows.map((row) => row.split(',')[8])).toEqual([
+      'Am Mühlenberg',
+      'Am Mühlenberg',
+      'Am Mühlenberg',
+    ])
+  })
+
+  it('keeps a street without house numbers as one row with an empty Number field', () => {
+    const withoutNumbers = { ...summary, addressCount: 0, ranges: [] }
+    const rows = createNwPublisherCsv([withoutNumbers]).replace(/^\uFEFF/, '').split('\r\n').slice(1)
+
+    expect(rows).toHaveLength(1)
+    expect(rows[0].split(',')[7]).toBe('')
+  })
 })
