@@ -87,6 +87,7 @@ app.innerHTML = `
 
   <footer>
     <span>kml2street</span>
+    <span>Made with ❤️ by Timmy Schierling</span>
     <span>OpenStreetMap-Daten unter ODbL</span>
   </footer>
 `
