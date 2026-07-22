@@ -14,7 +14,7 @@ const app = document.querySelector<HTMLDivElement>('#app')!
 app.innerHTML = `
   <main>
     <header class="masthead">
-      <h1><strong>kml2street</strong> – Straßenerkennung für NW Publisher</h1>
+      <h1><strong>kml2street</strong> – Straßenerkennung für NW Scheduler</h1>
       <span class="source-pill"><span></span>Daten von OpenStreetMap</span>
     </header>
 
@@ -77,7 +77,7 @@ app.innerHTML = `
           <div class="step-label fourth"><span>4</span> Exportieren</div>
           <div class="result-actions">
             <button id="copy-button" class="secondary-button" type="button">Liste kopieren</button>
-            <button id="csv-button" class="secondary-button" type="button">NW Publisher CSV</button>
+            <button id="csv-button" class="secondary-button" type="button">NW Scheduler CSV</button>
           </div>
           <p class="osm-note"><strong>Hinweis:</strong> Benannte Straßen werden auch ohne Hausnummern aufgeführt. Hausnummernbereiche sind nur so vollständig wie die Adressdaten in OpenStreetMap. Bitte vor der Verwendung stichprobenartig prüfen.</p>
         </section>

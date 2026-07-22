@@ -1,6 +1,6 @@
 # kml2street
 
-**Gebietsgrenzen rein, Straßenliste raus.** kml2street ist eine kleine Browser-App, die KML- und CSV-Gebiete mithilfe von OpenStreetMap in verständliche Straßen- und Hausnummernlisten umwandelt. Das Ergebnis lässt sich als CSV für NW Publisher exportieren.
+**Gebietsgrenzen rein, Straßenliste raus.** kml2street ist eine kleine Browser-App, die KML- und CSV-Gebiete mithilfe von OpenStreetMap in verständliche Straßen- und Hausnummernlisten umwandelt. Das Ergebnis lässt sich als CSV für NW Scheduler exportieren.
 
 ![kml2street – Kartenansicht und Gebietsimport](docs/screenshot.png)
 
@@ -11,7 +11,7 @@
 - Gebiete direkt auf der Karte einzeichnen und wieder als KML speichern
 - Straßen und Adressen live über die OpenStreetMap Overpass API ermitteln
 - Hausnummern kompakt und nach Straßenseite zusammenfassen
-- Ergebnisse als CSV oder im 25-spaltigen NW-Publisher-Format exportieren
+- Ergebnisse als CSV oder im 25-spaltigen NW-Scheduler-Format exportieren
 - Gebietsmetadaten wie `TerritoryID`, `Number`, `CategoryCode` und `Category` beim CSV-Workflow erhalten
 
 ## Lokal starten
@@ -34,11 +34,11 @@ TerritoryID,Category,Number,Boundary
 9003002,Velpke,3002,"[10.93964,52.41423],[10.94104,52.41604],[10.94309,52.41687],[10.93964,52.41423]"
 ```
 
-`TerritoryID`, `Number`, `CategoryCode` und `Category` werden aus einem eindeutigen CSV-Gebiet übernommen und beim NW-Publisher-Export wieder eingetragen. Bei KML-Dateien und direkt gezeichneten Gebieten bleiben diese Felder leer.
+`TerritoryID`, `Number`, `CategoryCode` und `Category` werden aus einem eindeutigen CSV-Gebiet übernommen und beim NW-Scheduler-Export wieder eingetragen. Bei KML-Dateien und direkt gezeichneten Gebieten bleiben diese Felder leer.
 
-## NW-Publisher-Export
+## NW-Scheduler-Export
 
-Der Button **NW Publisher CSV** erzeugt eine kommaseparierte UTF-8-Datei mit denselben 25 Spalten wie ein NW-Publisher-Adress-Export. Jede erkannte Straße wird als eigener Datensatz ausgegeben. Hausnummernbereiche stehen in `Number`; Ort, Postleitzahl und Bundesland werden soweit verfügbar aus OpenStreetMap ergänzt.
+Der Button **NW Scheduler CSV** erzeugt eine kommaseparierte UTF-8-Datei mit denselben 25 Spalten wie ein NW-Scheduler-Adress-Export. Jede erkannte Straße wird als eigener Datensatz ausgegeben. Hausnummernbereiche stehen in `Number`; Ort, Postleitzahl und Bundesland werden soweit verfügbar aus OpenStreetMap ergänzt.
 
 `TerritoryAddressID` und `TerritoryAddressApartmentID` bleiben bewusst leer, damit beim Import keine bestehenden Adressen anhand fremder IDs aktualisiert werden.
 
