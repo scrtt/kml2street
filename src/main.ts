@@ -4,7 +4,7 @@ import './style.css'
 import { parseBoundaryCsv } from './boundary-csv'
 import { polygonAreaApprox } from './geometry'
 import { createKml, parseKml } from './kml'
-import { createNwPublisherCsv } from './nw-publisher-csv'
+import { createNwPublisherCsv, createNwPublisherFilename } from './nw-publisher-csv'
 import { fetchAreaData } from './overpass'
 import { summarizeAddresses } from './summarize'
 import type { AddressRecord, ParsedKml, StreetDetails, StreetSummary } from './types'
@@ -87,6 +87,7 @@ app.innerHTML = `
 
   <footer>
     <span>kml2street</span>
+    <span>Made with ❤️ by Timmy Schierling</span>
     <span>OpenStreetMap-Daten unter ODbL</span>
   </footer>
 `
@@ -406,11 +407,11 @@ async function copyResults(): Promise<void> {
 }
 
 function downloadCsv(): void {
-  const csv = createNwPublisherCsv(summaries, parsedKml?.territory)
+  const csv = createNwPublisherCsv(summaries, parsedKml?.territory, parsedKml?.name)
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url
-  link.download = `${(parsedKml?.name || 'strassenliste').replace(/[^a-z0-9äöüß_-]+/gi, '-')}.csv`
+  link.download = createNwPublisherFilename(parsedKml?.name)
   link.click()
   URL.revokeObjectURL(url)
 }
