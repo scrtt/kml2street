@@ -6,8 +6,9 @@ import { polygonAreaApprox } from './geometry'
 import { createKml, parseKml } from './kml'
 import { createNwPublisherCsv, createNwPublisherFilename } from './nw-publisher-csv'
 import { fetchAreaData } from './overpass'
+import { applyEditedRanges, createEditedRange, mergeNumberRanges } from './range-editor'
 import { summarizeAddresses } from './summarize'
-import type { AddressRecord, ParsedKml, StreetDetails, StreetSummary } from './types'
+import type { AddressRecord, NumberRange, ParsedKml, StreetDetails, StreetSummary } from './types'
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -129,12 +130,14 @@ let parsedKml: ParsedKml | null = null
 let boundaryLayer: Layer | null = null
 let addresses: AddressRecord[] = []
 let summaries: StreetSummary[] = []
+let osmSummaries: StreetSummary[] = []
 let streets: StreetDetails[] = []
 let controller: AbortController | null = null
 let isDrawing = false
 let drawingPoints: LatLng[] = []
 let draftShape: Layer | null = null
 const draftVertices = L.layerGroup().addTo(map)
+let rangeEditor: { summaryIndex: number; ranges: NumberRange[]; selected: Set<number>; error: string } | null = null
 
 function setStatus(message: string, kind: 'default' | 'loading' | 'error' | 'success' = 'default'): void {
   status.className = `status ${kind}`
@@ -145,6 +148,10 @@ function escapeHtml(value: string): string {
   const element = document.createElement('span')
   element.textContent = value
   return element.innerHTML
+}
+
+function escapeAttribute(value: string): string {
+  return escapeHtml(value).replaceAll('"', '&quot;').replaceAll("'", '&#39;')
 }
 
 function renderBoundary(kml: ParsedKml): void {
@@ -172,6 +179,8 @@ function activateArea(kml: ParsedKml, displayName: string): void {
   addresses = []
   streets = []
   summaries = []
+  osmSummaries = []
+  rangeEditor = null
   resultsSection.classList.add('is-hidden')
   fileName.textContent = displayName
   fileIcon.textContent = displayName.toLocaleLowerCase('en').endsWith('.csv') ? 'CSV' : 'KML'
@@ -209,6 +218,8 @@ function clearArea(resetView = true): void {
   addresses = []
   streets = []
   summaries = []
+  osmSummaries = []
+  rangeEditor = null
   fileInput.value = ''
   fileCard.classList.add('is-hidden')
   dropZone.classList.remove('is-hidden')
@@ -316,7 +327,37 @@ function downloadKml(): void {
   URL.revokeObjectURL(url)
 }
 
-function renderResults(): void {
+function renderRangeEditor(summary: StreetSummary): string {
+  if (!rangeEditor) return ''
+  const editor = rangeEditor
+  const rows = editor.ranges.map((range, rangeIndex) => `
+    <div class="range-editor-row">
+      <input class="range-select" type="checkbox" data-range-select="${rangeIndex}" aria-label="Bereich ${escapeAttribute(range.label || String(rangeIndex + 1))} auswählen" ${editor.selected.has(rangeIndex) ? 'checked' : ''}>
+      <input class="range-input" type="text" value="${escapeAttribute(range.label)}" data-range-input="${rangeIndex}" aria-label="Nummernbereich" placeholder="z. B. 1–9">
+      <button class="range-delete" type="button" data-range-delete="${rangeIndex}" aria-label="Nummernbereich löschen">×</button>
+    </div>
+  `).join('')
+
+  return `
+    <div class="range-editor" aria-label="Nummernkreise für ${escapeAttribute(summary.street)} bearbeiten">
+      <p class="range-editor-help">Bereiche auswählen und verbinden oder Werte direkt ändern.</p>
+      <div class="range-editor-list">${rows || '<p class="range-editor-empty">Noch keine Nummernkreise vorhanden.</p>'}</div>
+      ${editor.error ? `<p class="range-editor-error" role="alert">${escapeHtml(editor.error)}</p>` : ''}
+      <div class="range-editor-tools">
+        <button type="button" data-range-add>+ Bereich</button>
+        <button type="button" data-range-merge ${editor.selected.size < 2 ? 'disabled' : ''}>Auswahl verbinden</button>
+      </div>
+      <div class="range-editor-actions">
+        <button class="reset" type="button" data-range-reset>↺ OSM-Stand</button>
+        <span class="range-editor-action-spacer"></span>
+        <button type="button" data-range-cancel>Abbrechen</button>
+        <button class="save" type="button" data-range-save>Übernehmen</button>
+      </div>
+    </div>
+  `
+}
+
+function renderResults(scrollIntoView = true): void {
   resultsTitle.textContent = parsedKml?.name || 'Straßen im Gebiet'
   resultsMeta.textContent = `${summaries.length} ${summaries.length === 1 ? 'Straße' : 'Straßen'} · ${addresses.length} eindeutige ${addresses.length === 1 ? 'Hausnummer' : 'Hausnummern'}`
 
@@ -324,23 +365,79 @@ function renderResults(): void {
     resultList.innerHTML = `<div class="empty-result"><strong>Keine benannten Straßen gefunden</strong><span>Für dieses Gebiet sind in OpenStreetMap keine benannten Straßen erfasst.</span></div>`
   } else {
     resultList.innerHTML = summaries.map((summary, index) => `
-      <article class="street-row">
+      <article class="street-row${rangeEditor?.summaryIndex === index ? ' is-editing' : ''}">
         <span class="row-number">${String(index + 1).padStart(2, '0')}</span>
         <div class="street-content">
           <div class="street-heading">
             <h3>${escapeHtml(summary.street)}</h3>
-            <span class="address-count">${summary.addressCount}<small>Nr.</small></span>
+            <span class="street-heading-actions">
+              <span class="address-count">${summary.addressCount}<small>Nr.</small></span>
+              <button class="edit-ranges" type="button" data-edit-ranges="${index}" aria-label="Nummernkreise von ${escapeAttribute(summary.street)} bearbeiten">Bearbeiten</button>
+            </span>
           </div>
           <div class="ranges${summary.ranges.length === 0 ? ' no-addresses' : ''}">${summary.ranges.length > 0
             ? summary.ranges.map((range) => `<span>${escapeHtml(range.label)}${range.parity ? `<small>${range.parity}</small>` : ''}</span>`).join('')
-            : '<span>Keine Hausnummern in OSM</span>'}</div>
+            : `<span>${summary.manuallyEdited ? 'Keine Nummernkreise' : 'Keine Hausnummern in OSM'}</span>`}</div>
+          ${rangeEditor?.summaryIndex === index ? renderRangeEditor(summary) : ''}
         </div>
       </article>
     `).join('')
   }
 
   resultsSection.classList.remove('is-hidden')
-  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  if (scrollIntoView) resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+}
+
+function openRangeEditor(summaryIndex: number): void {
+  rangeEditor = {
+    summaryIndex,
+    ranges: summaries[summaryIndex].ranges.map((range) => ({ ...range, values: [...range.values] })),
+    selected: new Set(),
+    error: '',
+  }
+  renderResults(false)
+}
+
+function updateRangeEditorInput(target: HTMLInputElement): void {
+  if (!rangeEditor) return
+  const inputIndex = target.dataset.rangeInput
+  if (inputIndex === undefined) return
+  const index = Number(inputIndex)
+  const current = rangeEditor.ranges[index]
+  if (!current) return
+
+  rangeEditor.ranges[index] = createEditedRange(target.value, current.parity)
+  rangeEditor.error = ''
+}
+
+function saveRangeEditor(): void {
+  if (!rangeEditor) return
+  if (rangeEditor.ranges.some((range) => !range.label.trim())) {
+    rangeEditor.error = 'Bitte leere Nummernkreise ausfüllen oder löschen.'
+    renderResults(false)
+    return
+  }
+  summaries[rangeEditor.summaryIndex] = applyEditedRanges(summaries[rangeEditor.summaryIndex], rangeEditor.ranges)
+  rangeEditor = null
+  setStatus('Manuelle Änderungen übernommen. Kopie und CSV sind aktualisiert.', 'success')
+  renderResults(false)
+}
+
+function cloneSummary(summary: StreetSummary): StreetSummary {
+  return {
+    ...summary,
+    ranges: summary.ranges.map((range) => ({ ...range, values: [...range.values] })),
+  }
+}
+
+function resetRangeEditor(): void {
+  if (!rangeEditor) return
+  const original = osmSummaries[rangeEditor.summaryIndex]
+  if (!original) return
+  summaries[rangeEditor.summaryIndex] = cloneSummary(original)
+  rangeEditor = null
+  setStatus('Nummernkreise dieser Straße auf den OpenStreetMap-Stand zurückgesetzt.', 'success')
+  renderResults(false)
 }
 
 function normalizeStreetName(value: string): string {
@@ -381,7 +478,9 @@ async function analyze(): Promise<void> {
     const areaData = await fetchAreaData(parsedKml, controller.signal)
     addresses = areaData.addresses
     streets = areaData.streets
-    summaries = includeStreetsWithoutAddresses(summarizeAddresses(addresses), streets)
+    osmSummaries = includeStreetsWithoutAddresses(summarizeAddresses(addresses), streets).map(cloneSummary)
+    summaries = osmSummaries.map(cloneSummary)
+    rangeEditor = null
     setStatus(`${summaries.length} Straßen erfolgreich zusammengefasst.`, 'success')
     renderResults()
   } catch (error) {
@@ -459,3 +558,74 @@ removeFile.addEventListener('click', () => clearArea())
 analyzeButton.addEventListener('click', () => void analyze())
 copyButton.addEventListener('click', () => void copyResults())
 csvButton.addEventListener('click', downloadCsv)
+
+resultList.addEventListener('input', (event) => {
+  const target = event.target
+  if (target instanceof HTMLInputElement) updateRangeEditorInput(target)
+})
+
+resultList.addEventListener('change', (event) => {
+  const target = event.target
+  if (!rangeEditor || !(target instanceof HTMLInputElement) || target.dataset.rangeSelect === undefined) return
+  const index = Number(target.dataset.rangeSelect)
+  if (target.checked) rangeEditor.selected.add(index)
+  else rangeEditor.selected.delete(index)
+  const mergeButton = resultList.querySelector<HTMLButtonElement>('[data-range-merge]')
+  if (mergeButton) mergeButton.disabled = rangeEditor.selected.size < 2
+})
+
+resultList.addEventListener('click', (event) => {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return
+
+  const editButton = target.closest<HTMLButtonElement>('[data-edit-ranges]')
+  if (editButton) {
+    openRangeEditor(Number(editButton.dataset.editRanges))
+    return
+  }
+  if (!rangeEditor) return
+
+  const deleteButton = target.closest<HTMLButtonElement>('[data-range-delete]')
+  if (deleteButton) {
+    const deletedIndex = Number(deleteButton.dataset.rangeDelete)
+    rangeEditor.ranges.splice(deletedIndex, 1)
+    rangeEditor.selected = new Set([...rangeEditor.selected]
+      .filter((index) => index !== deletedIndex)
+      .map((index) => index > deletedIndex ? index - 1 : index))
+    renderResults(false)
+    return
+  }
+  if (target.closest('[data-range-add]')) {
+    rangeEditor.ranges.push(createEditedRange(''))
+    rangeEditor.error = ''
+    renderResults(false)
+    resultList.querySelectorAll<HTMLInputElement>('[data-range-input]').item(rangeEditor.ranges.length - 1)?.focus()
+    return
+  }
+  if (target.closest('[data-range-merge]')) {
+    const selectedIndices = [...rangeEditor.selected].sort((left, right) => left - right)
+    const merged = mergeNumberRanges(selectedIndices.map((index) => rangeEditor!.ranges[index]))
+    if (!merged) {
+      rangeEditor.error = 'Verbinden klappt nur mit Bereichen wie 1, 1a oder 1–9.'
+      renderResults(false)
+      return
+    }
+    const insertAt = selectedIndices[0]
+    rangeEditor.ranges = rangeEditor.ranges.filter((_, index) => !rangeEditor!.selected.has(index))
+    rangeEditor.ranges.splice(insertAt, 0, merged)
+    rangeEditor.selected.clear()
+    rangeEditor.error = ''
+    renderResults(false)
+    return
+  }
+  if (target.closest('[data-range-cancel]')) {
+    rangeEditor = null
+    renderResults(false)
+    return
+  }
+  if (target.closest('[data-range-reset]')) {
+    resetRangeEditor()
+    return
+  }
+  if (target.closest('[data-range-save]')) saveRangeEditor()
+})
