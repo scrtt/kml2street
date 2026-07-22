@@ -406,7 +406,7 @@ async function copyResults(): Promise<void> {
 }
 
 function downloadCsv(): void {
-  const csv = createNwPublisherCsv(summaries, parsedKml?.territory)
+  const csv = createNwPublisherCsv(summaries, parsedKml?.territory, parsedKml?.name)
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url

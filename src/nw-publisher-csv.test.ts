@@ -39,7 +39,7 @@ describe('createNwPublisherCsv', () => {
     expect(createNwPublisherCsv([withComma])).toContain('"Straße, Nord"')
   })
 
-  it('exports all displayed number ranges in one street row', () => {
+  it('exports every displayed number range as a distinct street with a stable ID', () => {
     const withThreeRanges: StreetSummary = {
       ...summary,
       ranges: [
@@ -48,11 +48,17 @@ describe('createNwPublisherCsv', () => {
         { label: '17', values: ['17'] },
       ],
     }
-    const rows = createNwPublisherCsv([withThreeRanges]).replace(/^\uFEFF/, '').split('\r\n').slice(1)
+    const territory = { id: '9004302', number: '4302', categoryCode: '', category: '' }
+    const csv = createNwPublisherCsv([withThreeRanges], territory)
+    const rows = csv.replace(/^\uFEFF/, '').split('\r\n').slice(1).map((row) => row.split(','))
+    const addressIds = rows.map((row) => row[4])
 
-    expect(rows).toHaveLength(1)
-    expect(rows[0]).toContain(',"1-9, 2-10, 17",Am Mühlenberg,')
-    expect(rows[0]).toContain(',,,Street,Available,0,')
+    expect(rows).toHaveLength(3)
+    expect(rows.map((row) => row[7])).toEqual(['1-9', '2-10', '17'])
+    expect(rows.every((row) => row[8] === 'Am Mühlenberg' && row[14] === 'Street')).toBe(true)
+    expect(addressIds.every((id) => /^9\d{8}$/.test(id))).toBe(true)
+    expect(new Set(addressIds).size).toBe(3)
+    expect(createNwPublisherCsv([withThreeRanges], territory)).toBe(csv)
   })
 
   it('keeps a street without house numbers as one row with an empty Number field', () => {

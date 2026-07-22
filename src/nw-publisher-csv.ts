@@ -41,38 +41,69 @@ export function createNwPublisherFilename(areaName?: string): string {
   return `${sanitizedAreaName || 'gebiet'}-addresses.csv`
 }
 
-function numberRanges(summary: StreetSummary): string {
-  return summary.ranges.map((range) => range.label.replaceAll('–', '-')).join(', ')
+function stableAddressId(key: string, usedIds: Set<string>): string {
+  let hash = 2166136261
+  for (const character of key) {
+    hash ^= character.codePointAt(0) ?? 0
+    hash = Math.imul(hash, 16777619)
+  }
+
+  let numericId = 900_000_000 + ((hash >>> 0) % 100_000_000)
+  while (usedIds.has(String(numericId))) {
+    numericId = numericId === 999_999_999 ? 900_000_000 : numericId + 1
+  }
+
+  const id = String(numericId)
+  usedIds.add(id)
+  return id
 }
 
-export function createNwPublisherCsv(summaries: StreetSummary[], territory?: TerritoryInfo): string {
-  const rows = summaries.map((summary) => [
-    territory?.id ?? '',
-    territory?.number ?? '',
-    territory?.categoryCode ?? '',
-    territory?.category ?? '',
-    '',
-    '',
-    '',
-    numberRanges(summary),
-    summary.street,
-    summary.suburb,
-    summary.postalCode,
-    summary.state,
-    '',
-    '',
-    'Street',
-    'Available',
-    '0',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-  ])
+export function createNwPublisherCsv(
+  summaries: StreetSummary[],
+  territory?: TerritoryInfo,
+  areaName = '',
+): string {
+  const usedAddressIds = new Set<string>()
+  const areaKey = territory?.id || [territory?.categoryCode, territory?.number, areaName].filter(Boolean).join('|')
+  const rows = summaries.flatMap((summary) => {
+    const ranges = summary.ranges.length > 0 ? summary.ranges : [{ label: '', values: [] }]
+    const needsDistinctIds = ranges.length > 1
+
+    return ranges.map((range) => {
+      const numberRange = range.label.replaceAll('–', '-')
+      const addressId = needsDistinctIds
+        ? stableAddressId(`${areaKey}|${summary.street}|${numberRange}`, usedAddressIds)
+        : ''
+
+      return [
+        territory?.id ?? '',
+        territory?.number ?? '',
+        territory?.categoryCode ?? '',
+        territory?.category ?? '',
+        addressId,
+        '',
+        '',
+        numberRange,
+        summary.street,
+        summary.suburb,
+        summary.postalCode,
+        summary.state,
+        '',
+        '',
+        'Street',
+        'Available',
+        '0',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+      ]
+    })
+  })
 
   return `\uFEFF${[NW_PUBLISHER_HEADERS, ...rows]
     .map((row) => row.map(csvCell).join(','))
