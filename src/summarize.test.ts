@@ -30,6 +30,27 @@ describe('summarizeNumbers', () => {
     ])
   })
 
+  it('uses suffixed numbers to bridge matching numeric ranges', () => {
+    const numbers = [
+      '2', '4',
+      ...Array.from({ length: 13 }, (_, index) => String(8 + index * 2)),
+      '34a', '34b',
+      ...Array.from({ length: 16 }, (_, index) => String(36 + index * 2)),
+    ]
+
+    expect(testing.summarizeNumbers(numbers)).toEqual([
+      { label: '2–4', parity: 'gerade', values: ['2', '4'] },
+      {
+        label: '8–66',
+        parity: 'gerade',
+        values: [
+          ...Array.from({ length: 13 }, (_, index) => String(8 + index * 2)),
+          ...Array.from({ length: 16 }, (_, index) => String(36 + index * 2)),
+        ],
+      },
+    ])
+  })
+
   it('omits suffixes whose base number is already covered by a numeric range', () => {
     const numbers = [
       '1a', '1b', '1c', '1d', '1e', '1f', '1g', '1h',

@@ -36,14 +36,28 @@ function makeRange(values: ParsedNumber[], parity?: 'gerade' | 'ungerade'): Numb
   }
 }
 
-function consecutiveGroups(values: ParsedNumber[], step: number, parity?: 'gerade' | 'ungerade'): NumberRange[] {
+function consecutiveGroups(
+  values: ParsedNumber[],
+  step: number,
+  parity?: 'gerade' | 'ungerade',
+  suffixBridges: ParsedNumber[] = [],
+): NumberRange[] {
   if (values.length === 0) return []
   const groups: ParsedNumber[][] = [[values[0]]]
+  const bridgeNumbers = new Set(suffixBridges.map((value) => value.numeric))
 
   for (const value of values.slice(1)) {
     const group = groups.at(-1)!
     const previous = group.at(-1)!
-    if (value.numeric - previous.numeric === step) group.push(value)
+    const difference = value.numeric - previous.numeric
+    const gapIsCoveredBySuffixes = difference > step
+      && difference % step === 0
+      && Array.from(
+        { length: difference / step - 1 },
+        (_, index) => previous.numeric + (index + 1) * step,
+      ).every((number) => bridgeNumbers.has(number))
+
+    if (difference === step || gapIsCoveredBySuffixes) group.push(value)
     else groups.push([value])
   }
 
@@ -93,15 +107,22 @@ function summarizeNumbers(numbers: string[]): NumberRange[] {
   } else {
     const odd = plain.filter((value) => value.numeric % 2 !== 0)
     const even = plain.filter((value) => value.numeric % 2 === 0)
-    ranges.push(...consecutiveGroups(odd, 2, 'ungerade'))
-    ranges.push(...consecutiveGroups(even, 2, 'gerade'))
+    ranges.push(...consecutiveGroups(odd, 2, 'ungerade', suffixed))
+    ranges.push(...consecutiveGroups(even, 2, 'gerade', suffixed))
   }
 
   const numbersCoveredByRanges = new Set(
     ranges
       .filter((range) => range.values.length > 1)
-      .flatMap((range) => range.values)
-      .map((value) => Number(value)),
+      .flatMap((range) => {
+        const first = parseNumber(range.values[0])!
+        const last = parseNumber(range.values.at(-1)!)!
+        const step = range.parity ? 2 : 1
+        return Array.from(
+          { length: (last.numeric - first.numeric) / step + 1 },
+          (_, index) => first.numeric + index * step,
+        )
+      }),
   )
   const uncoveredSuffixes = suffixed.filter((value) => !numbersCoveredByRanges.has(value.numeric))
 
